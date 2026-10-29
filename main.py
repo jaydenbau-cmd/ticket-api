@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 import uvicorn
 from pydantic import BaseModel
 from enum import Enum
@@ -29,9 +29,12 @@ def create_ticket(ticket: CreateTicket):
     tickets.append(new_ticket)
     return new_ticket
 
-@app.get("/tickets")
-def list_tickets():
-    return tickets
+@app.get("/tickets/{ticket_id}")
+def list_tickets(ticket_id: int):
+    for ticket in tickets:
+        if ticket["id"] == ticket_id:
+            return ticket
+    raise HTTPException(status_code=404, detail=f"Ticket {ticket_id} not found")
 
 if __name__ == "__main__":
     uvicorn.run("main:app", reload=True)
