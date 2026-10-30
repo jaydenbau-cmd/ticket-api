@@ -1,26 +1,16 @@
 from fastapi import FastAPI, HTTPException
 import uvicorn
 from pydantic import BaseModel
-from enum import Enum
-from sqlmodel import Field, SQLModel, create_engine
-from datetime import datetime, UTC
+from sqlmodel import SQLModel, create_engine, Session
+from contextlib import asynccontextmanager
+from models import Ticket, Priority, Status
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    SQLModel.metadata.create_all(engine)
+    yield
 
-tickets = []
-
-class Priority(str, Enum):
-    low = "low"
-    medium = "medium"
-    high = "high"
-
-class Ticket(SQLModel, table=True):
-    id: int | None = Field(default=None, primary_key=True)
-    priority: Priority = Field(default=Priority.medium)
-    title : str
-    description: str
-    status: str = Field(default="open")
-    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+app = FastAPI(lifespan=lifespan)
 
 class CreateTicket(BaseModel):
     title: str
@@ -31,14 +21,16 @@ sqlite_url = f"sqlite:///{sqlite_file_name}"
 
 engine = create_engine(sqlite_url, echo=True)
 
-SQLModel.metadata.create_all(engine)
-
 @app.post("/ticket")
 def create_ticket(ticket: CreateTicket):
     new_ticket = Ticket(
         title = ticket.title,
         description = ticket.description,
         )
+
+    with Session(engine) as session:
+        session.add(new_ticket)
+        session.commit()
 
     return new_ticket
 
