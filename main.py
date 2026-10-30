@@ -2,6 +2,8 @@ from fastapi import FastAPI, HTTPException
 import uvicorn
 from pydantic import BaseModel
 from enum import Enum
+from sqlmodel import Field, SQLModel, create_engine
+from datetime import datetime, UTC
 
 app = FastAPI()
 
@@ -12,21 +14,32 @@ class Priority(str, Enum):
     medium = "medium"
     high = "high"
 
+class Ticket(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    priority: Priority = Field(default=Priority.medium)
+    title : str
+    description: str
+    status: str = Field(default="open")
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
 class CreateTicket(BaseModel):
     title: str
     description: str
-    priority: Priority = Priority.medium
+
+sqlite_file_name = "tickets.db"
+sqlite_url = f"sqlite:///{sqlite_file_name}"
+
+engine = create_engine(sqlite_url, echo=True)
+
+SQLModel.metadata.create_all(engine)
 
 @app.post("/ticket")
 def create_ticket(ticket: CreateTicket):
-    new_ticket = {
-        "id": len(tickets) + 1,
-        "priority": ticket.priority,
-        "title": ticket.title,
-        "description": ticket.description,
-        "status": "open"
-    }
-    tickets.append(new_ticket)
+    new_ticket = Ticket(
+        title = ticket.title,
+        description = ticket.description,
+        )
+
     return new_ticket
 
 @app.get("/tickets/{ticket_id}")
