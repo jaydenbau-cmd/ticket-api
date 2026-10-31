@@ -17,6 +17,10 @@ class CreateTicket(BaseModel):
     title: str
     description: str
 
+class UpdateTicket(BaseModel):
+    status: Status | None = None
+    priority: Priority | None = None
+
 sqlite_file_name = "tickets.db"
 sqlite_url = f"sqlite:///{sqlite_file_name}"
 
@@ -56,6 +60,21 @@ def get_all_tickets(session: SessionDep):
     tickets = session.exec(statement).all()
 
     return tickets
+
+@app.patch("/tickets/{ticket_id}")
+def update_ticket(ticket_id: int, update: UpdateTicket, session: SessionDep):
+    ticket = session.get(Ticket, ticket_id)
+
+    if ticket is None:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    update_data = update.model_dump(exclude_unset=True)
+    ticket.sqlmodel_update(update_data)
+    session.add(ticket)
+    session.commit()
+    session.refresh(ticket)
+
+    return ticket
 
 if __name__ == "__main__":
     uvicorn.run("main:app", reload=True)
