@@ -68,8 +68,15 @@ def get_ticket(ticket_id: int, session: SessionDep):
     return ticket
 
 @app.get("/tickets")
-def get_all_tickets(session: SessionDep):
+def get_all_tickets(session: SessionDep, status: Status | None = None, priority: Priority | None = None):
+
     statement = select(Ticket)
+    if status is not None:
+        statement = statement.where(Ticket.status == status)
+
+    if priority is not None:
+        statement = statement.where(Ticket.priority == priority)
+
     tickets = session.exec(statement).all()
 
     return tickets
