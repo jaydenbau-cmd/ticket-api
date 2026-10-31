@@ -39,6 +39,12 @@ def get_session():
 
 SessionDep = Annotated[Session, Depends(get_session)]
 
+allowed_next_status = {
+    Status.open: [Status.in_progress],
+    Status.in_progress: [Status.closed],
+    Status.closed: [],
+}
+
 @app.post("/tickets")
 def create_ticket(ticket: CreateTicket, session: SessionDep):
     new_ticket = Ticket(
@@ -75,7 +81,15 @@ def update_ticket(ticket_id: int, update: UpdateTicket, session: SessionDep):
     if ticket is None:
         raise HTTPException(status_code=404, detail="Ticket not found")
 
+    current_status = ticket.status
     update_data = update.model_dump(exclude_unset=True)
+    requested = update_data["status"]
+
+    if not requested in allowed_next_status[current_status]:
+        allowed = [s.value for s in allowed_next_status[current_status]]
+        allowed_text = ", ".join(allowed) or "none"
+        raise HTTPException(status_code=409, detail=f"Cannot move ticket from '{current_status.value}' to '{requested.value}'. Allowed: '{allowed_text}'")
+
     ticket.sqlmodel_update(update_data)
     session.add(ticket)
     session.commit()
