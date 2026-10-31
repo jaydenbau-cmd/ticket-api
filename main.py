@@ -1,7 +1,7 @@
 from typing import Annotated
 from fastapi import FastAPI, HTTPException, Depends
 import uvicorn
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from sqlmodel import SQLModel, create_engine, Session, select
 from contextlib import asynccontextmanager
 from models import Ticket, Priority, Status
@@ -20,6 +20,13 @@ class CreateTicket(BaseModel):
 class UpdateTicket(BaseModel):
     status: Status | None = None
     priority: Priority | None = None
+
+    @field_validator("status", "priority")
+    @classmethod
+    def validate_values(cls, value):
+        if value is None:
+            raise ValueError("This field cannot be null")
+        return value
 
 sqlite_file_name = "tickets.db"
 sqlite_url = f"sqlite:///{sqlite_file_name}"
