@@ -10,7 +10,10 @@ async def lifespan(app: FastAPI):
     SQLModel.metadata.create_all(engine)
     yield
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(title="Ticket API",
+              description="A small support-ticket API with a status workflow.",
+              version="1.0.0",
+              lifespan=lifespan)
 
 class CreateTicket(BaseModel):
     title: str
@@ -44,7 +47,7 @@ allowed_next_status = {
     Status.closed: [],
 }
 
-@app.post("/tickets")
+@app.post("/tickets", tags=["Tickets"])
 def create_ticket(ticket: CreateTicket, session: SessionDep):
     new_ticket = Ticket(
         title = ticket.title,
@@ -57,7 +60,7 @@ def create_ticket(ticket: CreateTicket, session: SessionDep):
 
     return new_ticket
 
-@app.get("/tickets/{ticket_id}")
+@app.get("/tickets/{ticket_id}", tags=["Tickets"])
 def get_ticket(ticket_id: int, session: SessionDep):
     ticket = session.get(Ticket, ticket_id)
 
@@ -66,7 +69,7 @@ def get_ticket(ticket_id: int, session: SessionDep):
 
     return ticket
 
-@app.get("/tickets")
+@app.get("/tickets", tags=["Tickets"])
 def get_all_tickets(session: SessionDep, status: Status | None = None, priority: Priority | None = None):
 
     statement = select(Ticket)
@@ -80,7 +83,7 @@ def get_all_tickets(session: SessionDep, status: Status | None = None, priority:
 
     return tickets
 
-@app.patch("/tickets/{ticket_id}")
+@app.patch("/tickets/{ticket_id}", tags=["Tickets"])
 def update_ticket(ticket_id: int, update: UpdateTicket, session: SessionDep):
     ticket = session.get(Ticket, ticket_id)
 
