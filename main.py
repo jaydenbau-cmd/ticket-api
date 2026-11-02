@@ -1,6 +1,5 @@
 from typing import Annotated
 from fastapi import FastAPI, HTTPException, Depends
-import uvicorn
 from pydantic import BaseModel, field_validator
 from sqlmodel import SQLModel, create_engine, Session, select
 from contextlib import asynccontextmanager
@@ -105,6 +104,3 @@ def update_ticket(ticket_id: int, update: UpdateTicket, session: SessionDep):
     session.refresh(ticket)
 
     return ticket
-
-if __name__ == "__main__":
-    uvicorn.run("main:app", reload=True)
