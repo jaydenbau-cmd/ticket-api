@@ -61,3 +61,63 @@ def test_get_ticket(client: TestClient):
     assert fetched["id"] == data["id"]
     assert fetched["title"] == data["title"]
 
+def test_open_to_in_progress_allowed(client: TestClient):
+    ticket = make_ticket(client)
+    response = client.patch(f"/tickets/{ticket["id"]}", json={"status": "in_progress"})
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "in_progress"
+
+def test_open_to_closed_rejected(client: TestClient):
+    ticket = make_ticket(client)
+    response = client.patch(f"/tickets/{ticket['id']}", json={"status": "closed"})
+    unchanged = client.get(f"/tickets/{ticket['id']}").json()
+
+    assert response.status_code == 409
+    assert unchanged["status"] == "open"
+
+def test_closed_ticket_cannot_be_reopened(client: TestClient):
+    ticket = make_ticket(client)
+    url = f"/tickets/{ticket['id']}"
+
+    assert client.patch(url, json={"status": "in_progress"}).status_code == 200
+    assert client.patch(url, json={"status": "closed"}).status_code == 200
+
+    response = client.patch(url, json={"status": "open"})
+    unchanged = client.get(f"/tickets/{ticket['id']}").json()
+
+    assert response.status_code == 409
+    assert unchanged["status"] == "closed"
+
+def test_filter_by_status(client: TestClient):
+    ticket_1 = make_ticket(client)
+    ticket_2 = make_ticket(client, title="No internet connection")
+
+    assert client.patch(f"/tickets/{ticket_1['id']}", json={"status": "in_progress"}).status_code == 200
+    response = client.get("/tickets", params={"status": "in_progress"})
+
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+    assert response.json()[0]["id"] == ticket_1["id"]
+
+def test_null_rejected(client: TestClient):
+    ticket_1 = make_ticket(client)
+
+    status_response = client.patch(f"/tickets/{ticket_1['id']}", json={"status": None})
+    priority_response = client.patch(f"/tickets/{ticket_1['id']}", json={"priority": None})
+    unchanged = client.get(f"/tickets/{ticket_1['id']}").json()
+
+    assert status_response.status_code == 422
+    assert priority_response.status_code == 422
+    assert unchanged["status"] == "open"
+    assert unchanged["priority"] == "medium"
+
+def test_priority_only_update(client: TestClient):
+    ticket_1 = make_ticket(client)
+
+    assert client.patch(f"/tickets/{ticket_1['id']}", json={"priority": "high"}).status_code == 200
+    response = client.get(f"/tickets/{ticket_1['id']}")
+
+    assert response.status_code == 200
+    assert response.json()["priority"] == "high"
+    assert response.json()["status"] == "open"
