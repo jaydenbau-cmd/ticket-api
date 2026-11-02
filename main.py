@@ -90,12 +90,14 @@ def update_ticket(ticket_id: int, update: UpdateTicket, session: SessionDep):
 
     current_status = ticket.status
     update_data = update.model_dump(exclude_unset=True)
-    requested = update_data["status"]
 
-    if not requested in allowed_next_status[current_status]:
-        allowed = [s.value for s in allowed_next_status[current_status]]
-        allowed_text = ", ".join(allowed) or "none"
-        raise HTTPException(status_code=409, detail=f"Cannot move ticket from '{current_status.value}' to '{requested.value}'. Allowed: '{allowed_text}'")
+    if "status" in update_data:
+        requested = update_data["status"]
+
+        if not requested in allowed_next_status[current_status]:
+            allowed = [s.value for s in allowed_next_status[current_status]]
+            allowed_text = ", ".join(allowed) or "none"
+            raise HTTPException(status_code=409, detail=f"Cannot move ticket from '{current_status.value}' to '{requested.value}'. Allowed: '{allowed_text}'")
 
     ticket.sqlmodel_update(update_data)
     session.add(ticket)
