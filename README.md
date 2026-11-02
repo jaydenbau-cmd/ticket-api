@@ -102,3 +102,5 @@ requirements.txt   Dependencies
 
 - [FastAPI](https://fastapi.tiangolo.com/)
 - [SQLModel](https://sqlmodel.tiangolo.com/)
+- [Pydantic](https://docs.pydantic.dev/)
+- [pytest](https://docs.pytest.org/)
